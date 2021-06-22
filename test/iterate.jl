@@ -186,7 +186,7 @@ end
             @test x[1] === x.trivia[1]
             @test x[2] === x.args[2]
             @test x[3] === x.trivia[2]
-            @test x[4] === x.args[3]
+        @test x[4] === x.args[3]
             @test x[5] === x.args[1]
             @test x[6] === x.trivia[3]
         end
@@ -217,7 +217,7 @@ end
     end
 
     @testset ":comparison" begin
-        x = cst"a < b < c"
+            x = cst"a < b < c"
         @test length(x) == 5
         @test x[1] === x.args[1]
         @test x[2] === x.args[2]
@@ -251,7 +251,7 @@ end
             @test length(x) == 2
             @test x[1] === x.trivia[1]
             @test x[2] === x.args[1]
-        end
+            end
 
         @testset ":" begin
             x = cst"using a: b, c".args[1]
@@ -293,7 +293,7 @@ end
             @test x[1] === x.args[1]
             @test x[2] === x.args[2]
             @test x[3] === x.args[3]
-            @test x[4] === x.args[4]
+        @test x[4] === x.args[4]
             @test x[5] === x.trivia[1]
             @test x[6] === x.args[5]
         end
@@ -346,13 +346,13 @@ end
         @test x[3] === x.args[2]
         @test x[4] === x.trivia[2]
 
-        x = cst"f(a,)"
+            x = cst"f(a,)"
         @test length(x) == 5
         @test x[1] === x.args[1]
         @test x[2] === x.trivia[1]
         @test x[3] === x.args[2]
         @test x[4] === x.trivia[2]
-        @test x[5] === x.trivia[3]
+            @test x[5] === x.trivia[3]
 
         x = cst"f(;)"
         @test length(x) == 4
@@ -406,7 +406,7 @@ end
         @test x[1] === x.trivia[1]
         @test x[2] === x.args[1]
     end
-
+        
     @testset ":if" begin
         x = cst"if cond end"
         @test length(x) == 4
@@ -447,7 +447,7 @@ end
         @test headof(x[1]) === :ELSEIF
         @test x[2] === x.args[1]
         @test x[3] === x.args[2]
-
+        
         x = cst"if cond elseif c args else args end".args[3]
         @test length(x) == 5
         @test headof(x[1]) === :ELSEIF
@@ -469,7 +469,7 @@ end
         @test length(x) == 7
         @test x[1] === x.args[1]
         @test x[2] === x.trivia[1]
-        @test x[3] === x.args[2]
+    @test x[3] === x.args[2]
         @test x[4] === x.args[3]
         @test x[5] === x.trivia[2]
         @test x[6] === x.args[4]

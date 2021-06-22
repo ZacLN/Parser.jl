@@ -261,7 +261,7 @@ function norm_ast(a::Any)
     return a
 end
 
-function flisp_parsefile(str, display = true)
+function flisp_parsefile(str, display=true)
     pos = 1
     x1 = Expr(:file)
     try
@@ -319,7 +319,7 @@ function check_file(file, ret, neq)
         printstyled(file, color=:green)
         println()
         c0, c1 = compare(x0, x1)
-        printstyled(string("    ", c0), bold = true, color = :light_red)
+        printstyled(string("    ", c0), bold=true, color=:light_red)
         println()
         printstyled(string("    ", c1), bold=true, color=:light_green)
         println()
@@ -400,8 +400,8 @@ function compare(x::Expr, y::Expr)
             t = compare(x.args[i], y.args[i])
             if t != true
                 return t
-            end
         end
+end
     end
 end
 
@@ -434,7 +434,7 @@ function revfirstdiff(s0::AbstractString, s1::AbstractString)
             return sizeof(s0) - i, sizeof(s1) - i# This could return a non-commencing byte of a multi-byte unicode sequence.
         end
     end
-    return 1, 1
+return 1, 1
 end
 
 """
@@ -464,7 +464,7 @@ function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
     all(comp(x[i], y[i]) for i = 1:length(x))
 end
 
-function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.parse(s1, true); inds = false)
+function minimal_reparse(s0, s1, x0=CSTParser.parse(s0, true), x1=CSTParser.parse(s1, true); inds=false)
     if sizeof(s0) !== x0.fullspan
        error("minimal reparse - input text length doesn't match the full span of the provided CST.")
         # return inds ? (1:0, 1:length(x1.args), 1:0) : x1
@@ -486,7 +486,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
     r1 = 1:min(find_arg_at(x0, i0) - 1, length(x0.args), find_arg_at(x1, i0) - 1)
     for i = 1:min(find_arg_at(x0, i0) - 1, find_arg_at(x1, i0) - 1)
         if x0.args[i].fullspan !== x1.args[i].fullspan
-            r1 = 1:(i-1)
+            r1 = 1:(i - 1)
             break
         end
         r1 = 1:i
@@ -504,7 +504,7 @@ function minimal_reparse(s0, s1, x0 = CSTParser.parse(s0, true), x1 = CSTParser.
         if !quick_comp(x0.args[end - i], x1.args[end - i]) ||
             offset <= i1 ||
             length(x0.args) - i == last(r1) + 1 ||
-            offset - x1.args[end-i].fullspan <= i2 <= offset
+            offset - x1.args[end - i].fullspan <= i2 <= offset
 
             r2 = first(r2):length(x1.args) - i
             r3 = length(x0.args) .+ ((-i + 1):0)
@@ -540,12 +540,12 @@ check_span(x, neq = [])
 Recursively checks whether the span of an expression equals the sum of the span
 of its components. Returns a vector of failing expressions.
 """
-function check_span(x::EXPR, neq = [])
+function check_span(x::EXPR, neq=[])
     (ispunctuation(x) || isidentifier(x) || iskeyword(x) || isoperator(x) || isliteral(x) || headof(x) == :string) && return neq
 
     s = 0
     if x.args !== nothing
-        for a in x.args
+    for a in x.args
             check_span(a, neq)
             s += a.fullspan
         end
@@ -632,7 +632,7 @@ function _unescape_string(io, s::AbstractString)
                     n = 255
                 end
                 write(io, UInt8(n))
-            else
+    else
                 print(io, c == 'a' ? '\a' :
                           c == 'b' ? '\b' :
                           c == 't' ? '\t' :

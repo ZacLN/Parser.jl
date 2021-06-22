@@ -2,14 +2,14 @@
 # and that iteration functions are still correctly ordered.
 
 @testset "invalid jl file parsing" begin
-    trav(x, f = x->nothing) = (f(x);for a in x trav(a, f) end)
-    trav1(x, f = x->nothing) = (f(x);if x.args !== nothing;for a in x.args trav1(a, f) end;end)
+    trav(x, f=x -> nothing) = (f(x);for a in x trav(a, f) end)
+    trav1(x, f=x -> nothing) = (f(x);if x.args !== nothing;for a in x.args trav1(a, f) end;end)
 
-    function check_err_parse(s, n = 1000)
+    function check_err_parse(s, n=1000)
         check_str(s) # parsing works?
         check_itr_order(s) # iteration produces same text?
     
-        ts = collect(tokenize(s))[1:end-1]
+        ts = collect(tokenize(s))[1:end - 1]
         for _ in 1:n
             length(ts) == 1 && return
             deleteat!(ts, rand(1:length(ts)))
@@ -57,7 +57,7 @@
         segs
     end
     
-    function check_itr_order(s, x = CSTParser.parse(s, true))
+    function check_itr_order(s, x=CSTParser.parse(s, true))
         length(x) == 0 && return
         segs = get_segs(x)
         s0 = join(String(codeunits(s)[seg]) for seg in segs)
@@ -86,10 +86,10 @@
         all(comp(x[i], y[i]) for i = 1:length(x))
     end
 
-    function check_reparse(s0, n = 1000)
+    function check_reparse(s0, n=1000)
         for _ in 1:n
             x0 = CSTParser.parse(s0, true)
-            ts = collect(tokenize(s0))[1:end-1]
+            ts = collect(tokenize(s0))[1:end - 1]
             length(ts) < 2 && return
             deleteat!(ts, rand(1:length(ts)))
             s1 = untokenize(ts)
@@ -132,9 +132,9 @@
                 (!isfile(f) || !endswith(f, ".jl")) && continue
                 @info "checking $(nameof(check)) against $f"
                 s = String(read(f))
-                if isvalid(s) && length(s) >0
+                if isvalid(s) && length(s) > 0
                     check(s)
-                end
+    end
             end
         end
         true
