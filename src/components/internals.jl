@@ -50,6 +50,9 @@ function adjust_iter(x::EXPR)
     # Assumes x is a valid iterator
     if x.head === :call # isoperator(x.args[1]) && x.args[1].val in ("in", "∈")
         EXPR(EXPR(:OPERATOR, 0, 0, "="), EXPR[x.args[2], x.args[3]], EXPR[x.args[1]])
+    elseif isassignment(x) && length(x.args) == 2 && x.args[1].head == :call && x.args[2].head == :block && length(x.args[2].args) == 1
+        x.args[2] = setparent!(x.args[2].args[1], x)
+        x
     else
         x
     end
@@ -63,7 +66,7 @@ Is `x` a valid iterator for use in `for` loops or generators?
 is_range(x::EXPR) = isassignment(x) || (x.head === :call && (is_in(x.args[1]) || is_elof(x.args[1])))
 
 function parse_outer(ps)
-    if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !Tokens.isoperator(kindof(ps.nnt))
+    if kindof(ps.nt) === Tokens.OUTER && kindof(ps.nws) !== EmptyWS && !(Tokens.isoperator(kindof(ps.nnt)) && isbinaryop(ps.nnt) && kindof(ps.nnws) !== EmptyWS)
         EXPR(next(ps))
     end
 end
@@ -229,7 +232,14 @@ function parse_parameters(ps::ParseState, args::Vector{EXPR}, args1::Vector{EXPR
         isfirst = true
     end
     if !isempty(args1)
-        insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
+        # this happens when multiple semi-colons are used
+        # Julia will error during lowering, so these shenanigans are just for matching
+        # kwarg order with Base's parser
+        if length(args) >= 1 && args[1] isa EXPR && args[1].head == :kw && usekw
+            insert!(args, max(insert_params_at - 1, 1), EXPR(:parameters, args1, trivia))
+        else
+            insert!(args, insert_params_at, EXPR(:parameters, args1, trivia))
+        end
     end
     return
 end
@@ -291,7 +301,6 @@ function parse_macrocall(ps::ParseState)
         next(ps)
         return EXPR(:macrocall, EXPR[mname, EXPR(:NOTHING, 0, 0), @default ps parse_array(ps)], nothing)
     else
-        #TODO add special hndling for @doc
         args = EXPR[mname, EXPR(:NOTHING, 0, 0)]
         insquare = ps.closer.insquare
         prevpos = position(ps)
@@ -302,6 +311,13 @@ function parse_macrocall(ps::ParseState)
                 a = @closer ps :inmacro @closer ps :ws @closer ps :wsop parse_expression(ps)
             end
             push!(args, a)
+
+            if valof(mname) == "@doc" && ps.t.endpos[1] + 1 == ps.nt.startpos[1] && length(args) == 3
+                a = parse_expression(ps)
+                push!(args, a)
+                break
+            end
+
             if (insquare || ps.closer.paren || ps.closer.square) && kindof(ps.nt) === Tokens.FOR
                 break
             end

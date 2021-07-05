@@ -1,14 +1,27 @@
-# This deletes arbitrary tokens from files and checks that we can still parse them 
+# This deletes arbitrary tokens from files and checks that we can still parse them
 # and that iteration functions are still correctly ordered.
 
 @testset "invalid jl file parsing" begin
-    trav(x, f = x->nothing) = (f(x);for a in x trav(a, f) end)
-    trav1(x, f = x->nothing) = (f(x);if x.args !== nothing;for a in x.args trav1(a, f) end;end)
+    function trav(x, f = x->nothing)
+        f(x)
+        for a in x
+            trav(a, f)
+        end
+    end
 
-    function check_err_parse(s, n = 1000)
+    function trav1(x, f = x->nothing)
+        f(x)
+        if x.args !== nothing
+            for a in x
+                trav(a, f)
+            end
+        end
+    end
+
+    function check_err_parse(s, n = length(s)÷100)
         check_str(s) # parsing works?
         check_itr_order(s) # iteration produces same text?
-    
+
         ts = collect(tokenize(s))[1:end-1]
         for _ in 1:n
             length(ts) == 1 && return
@@ -16,7 +29,7 @@
             check_str(untokenize(ts))
         end
     end
-    
+
     function check_str(s)
         x = try
             CSTParser.parse(s, true)
@@ -45,8 +58,8 @@
         end
         check_itr_order(s, x)
     end
-    
-    function get_segs(x) 
+
+    function get_segs(x)
         offset = 0
         segs = []
         for i = 1:length(x)
@@ -56,7 +69,7 @@
         end
         segs
     end
-    
+
     function check_itr_order(s, x = CSTParser.parse(s, true))
         length(x) == 0 && return
         segs = get_segs(x)
@@ -78,12 +91,12 @@
 
     comp(x, y) = x == y
     function comp(x::CSTParser.EXPR, y::CSTParser.EXPR)
-        comp(x.head, y.head) && 
-        x.span == y.span && 
-        x.fullspan == y.fullspan && 
-        x.val == y.val && 
-        length(x) == length(y) && 
-        all(comp(x[i], y[i]) for i = 1:length(x))
+        comp(x.head, y.head) &&
+            x.span == y.span &&
+            x.fullspan == y.fullspan &&
+            x.val == y.val &&
+            length(x) == length(y) &&
+            all(comp(x[i], y[i]) for i = 1:length(x))
     end
 
     function check_reparse(s0, n = 1000)
@@ -100,9 +113,9 @@
             catch err
                 @info "minimal reparse failed with"
                 @info "s0:"
-                @info codeunits(s0)
+                @info s0
                 @info "s1:"
-                @info codeunits(s1)
+                @info s1
                 rethrow(err)
             end
             @test comp(x1, x2) ? true : (@info(string("Comparison failed between s0:\n", s0, "\n\n and s1: \n", s1)); false)

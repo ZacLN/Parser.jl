@@ -65,7 +65,7 @@ end
 
 """
     is_wrapped_assignment(x::EXPR)
-    
+
 Is `x` an assignment expression, ignoring any surrounding parentheses.
 """
 is_wrapped_assignment(x::EXPR) = isassignment(x) || (isbracketed(x) && is_wrapped_assignment(x.args[1]))
@@ -110,7 +110,7 @@ is_pairarrow(x) = isoperator(x) && valof(x) == "=>"
 is_in(x) = isoperator(x) && valof(x) == "in"
 is_elof(x) = isoperator(x) && valof(x) == "∈"
 is_colon(x) = isoperator(x) && valof(x) == ":"
-is_prime(x) = isoperator(x) && valof(x) == "'"
+is_prime(x) = isoperator(x) && maybe_strip_suffix(valof(x)) == "'"
 is_cond(x) = isoperator(x) && valof(x) == "?"
 is_where(x) = isoperator(x) && valof(x) == "where"
 is_anon_func(x) = isoperator(x) && valof(x) == "->"
@@ -172,9 +172,9 @@ Should only be called when has_sig(x) == true.
 function get_sig(x::EXPR)
     if headof(x) isa EXPR # headof(headof(x)) === :OPERATOR valof(headof(x)) == "="
         return x.args[1]
-    elseif headof(x) === :struct || headof(x) === :mutable 
+    elseif headof(x) === :struct || headof(x) === :mutable
         return x.args[2]
-    elseif  headof(x) === :abstract || headof(x) === :primitive || headof(x) === :function || headof(x) === :macro
+    elseif headof(x) === :abstract || headof(x) === :primitive || headof(x) === :function || headof(x) === :macro
         return x.args[1]
     end
 end

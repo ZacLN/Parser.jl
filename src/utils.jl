@@ -28,6 +28,11 @@ function closer(ps::ParseState)
     (ps.closer.paren && kindof(ps.nt) === Tokens.RPAREN) ||
     (ps.closer.brace && kindof(ps.nt) === Tokens.RBRACE) ||
     (ps.closer.square && kindof(ps.nt) === Tokens.RSQUARE) ||
+    # tilde parsing in vect exprs needs to be special cased because `~` has assignment precedence
+    (@static VERSION < v"1.4" ?
+        false :
+        ((ps.closer.insquare || ps.closer.inmacro) && kindof(ps.nt) === Tokens.APPROX && !isemptyws(ps.ws) && isemptyws(ps.nws))
+    ) ||
     kindof(ps.nt) === Tokens.ELSEIF ||
     kindof(ps.nt) === Tokens.ELSE ||
     kindof(ps.nt) === Tokens.CATCH ||
@@ -220,163 +225,6 @@ end
 has_error(ps::ParseState) = ps.errored
 
 using Base.Meta
-
-function norm_ast(a::Any)
-    if isa(a, Expr)
-        for (i, arg) in enumerate(a.args)
-            a.args[i] = norm_ast(arg)
-        end
-        if a.head === :line
-            return Expr(:line, a.args[1], :none)
-        end
-        if a.head === :macrocall
-            fa = a.args[1]
-            if fa === Symbol("@int128_str")
-                return Base.parse(Int128, a.args[3])
-            elseif fa === Symbol("@uint128_str")
-                return Base.parse(UInt128, a.args[3])
-            elseif fa === Symbol("@bigint_str")
-                return  Base.parse(BigInt, a.args[3])
-            elseif fa == Symbol("@big_str")
-                s = a.args[3]
-                n = tryparse(BigInt, s)
-                if !(n === nothing)
-                    return (n)
-                end
-                n = tryparse(BigFloat, s)
-                if !(n === nothing)
-                    return isnan((n)) ? :NaN : (n)
-                end
-                return s
-            end
-        elseif length(a.args) >= 2 && isexpr(a, :call) && a.args[1] == :- && isa(a.args[2], Number)
-            return -a.args[2]
-        end
-        return a
-    elseif isa(a, QuoteNode)
-        return Expr(:quote, norm_ast(a.value))
-    elseif isa(a, AbstractFloat) && isnan(a)
-        return :NaN
-    end
-    return a
-end
-
-function flisp_parsefile(str, display = true)
-    pos = 1
-    x1 = Expr(:file)
-    try
-        while pos <= sizeof(str)
-            x, pos = Meta.parse(str, pos)
-            push!(x1.args, x)
-        end
-    catch er
-        isa(er, InterruptException) && rethrow(er)
-        if display
-            Base.showerror(stdout, er, catch_backtrace())
-            println()
-        end
-        return x1, true
-    end
-    if length(x1.args) > 0  && x1.args[end] === nothing
-        pop!(x1.args)
-    end
-    x1 = norm_ast(x1)
-    remlineinfo!(x1)
-    return x1, false
-end
-
-function cst_parsefile(str)
-    x, ps = CSTParser.parse(ParseState(str), true)
-    sp = check_span(x)
-    # remove leading/trailing nothings
-    if length(x.args) > 0 && is_nothing(x.args[1])
-        popfirst!(x.args)
-    end
-    # if length(x.args) > 0 && is_nothing(x.args[end])
-    #     pop!(x.args)
-    # end
-    x0 = norm_ast(Expr(x))
-    x0, has_error(ps), sp
-end
-
-function check_file(file, ret, neq)
-    str = read(file, String)
-    x0, cstfailed, sp = cst_parsefile(str)
-    x1, _ = flisp_parsefile(str)
-
-    print("\r                             ")
-    if !isempty(sp)
-        printstyled(file, color=:blue)
-        @show sp
-        println()
-        push!(ret, (file, :span))
-    end
-    if cstfailed
-        printstyled(file, color=:yellow)
-        println()
-        push!(ret, (file, :errored))
-    elseif !(x0 == x1)
-        printstyled(file, color=:green)
-        println()
-        c0, c1 = compare(x0, x1)
-        printstyled(string("    ", c0), bold = true, color = :light_red)
-        println()
-        printstyled(string("    ", c1), bold=true, color=:light_green)
-        println()
-        push!(ret, (file, :noteq))
-    end
-end
-
-function check_base(dir=dirname(Base.find_source_file("essentials.jl")), display=false)
-    N = 0
-    neq = 0
-    err = 0
-    aerr = 0
-    fail = 0
-    bfail = 0
-    ret = []
-    oldstderr = stderr
-    redirect_stderr()
-    for (rp, _, files) in walkdir(dir)
-        for f in files
-            file = joinpath(rp, f)
-            if endswith(file, ".jl")
-                N += 1
-                try
-                    print("\r", rpad(string(N), 5), rpad(string(round(fail / N * 100, sigdigits=3)), 8), rpad(string(round(err / N * 100, sigdigits=3)), 8), rpad(string(round(neq / N * 100, sigdigits=3)), 8))
-
-                    check_file(file, ret, neq)
-                catch er
-                    isa(er, InterruptException) && rethrow(er)
-                    if display
-                        Base.showerror(stdout, er, catch_backtrace())
-                        println()
-                    end
-                    fail += 1
-                    printstyled(file, color=:red)
-                    println()
-                    push!(ret, (file, :failed))
-                end
-            end
-        end
-    end
-    redirect_stderr(oldstderr)
-    if bfail + fail + err + neq > 0
-        println("\r$N files")
-        printstyled("failed", color=:red)
-        println(" : $fail    $(100 * fail / N)%")
-        printstyled("errored", color=:yellow)
-        println(" : $err     $(100 * err / N)%")
-        printstyled("not eq.", color=:green)
-        println(" : $neq    $(100 * neq / N)%", "  -  $aerr     $(100 * aerr / N)%")
-        printstyled("base failed", color=:magenta)
-        println(" : $bfail    $(100 * bfail / N)%")
-        println()
-    else
-        println("\r")
-    end
-    ret
-end
 
 """
     compare(x,y)
@@ -752,7 +600,8 @@ macro cst_str(x)
 end
 
 function issuffixableliteral(ps::ParseState, x::EXPR)
-    isidentifier(ps.nt) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
+    # prefixed string/cmd macros can be suffixed by identifiers or numeric literals
+    (isidentifier(ps.nt) || isnumberliteral(ps.nt) || isbool(ps.nt)) && isemptyws(ps.ws) && ismacrocall(x) && (valof(x.args[1]) isa String && (endswith(valof(x.args[1]), "_str") || endswith(valof(x.args[1]), "_cmd")))
 end
 
 function loop_check(ps, prevpos)

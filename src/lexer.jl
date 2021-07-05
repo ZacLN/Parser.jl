@@ -165,7 +165,7 @@ function read_comment(l)
                 n_end += 1
             end
             if n_start == n_end
-                return true
+                return false
             end
             c = nc
         end
@@ -189,3 +189,4 @@ iscolon(t::AbstractToken) =  kindof(t) === Tokens.COLON
 iskeyword(t::AbstractToken) = Tokens.iskeyword(kindof(t))
 isinstance(t::AbstractToken) = isidentifier(t) || isliteral(t) || isbool(t) || iskeyword(t)
 ispunctuation(t::AbstractToken) = iscomma(t) || kindof(t) === Tokens.END || Tokens.LSQUARE ≤ kindof(t) ≤ Tokens.RPAREN || kindof(t) === Tokens.AT_SIGN
+isnumberliteral(t::AbstractToken) = isliteral(t) && (Tokens.INTEGER ≤ kindof(t) ≤ Tokens.FLOAT)

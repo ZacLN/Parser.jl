@@ -119,7 +119,7 @@ function update_span!(x::EXPR)
     if x.head isa EXPR && isoperator(x.head) && (is_dddot(x.head) || is_prime(x.head))
         # trailing unary operator
         x.span  = x.fullspan - x.head.fullspan + x.head.span
-    elseif lastchildistrivia(x)
+    elseif hastrivia(x) && lastchildistrivia(x)
         x.span = x.fullspan - last(x.trivia).fullspan + last(x.trivia).span
     elseif !isempty(x.args)
         x.span = x.fullspan - last(x.args).fullspan + last(x.args).span

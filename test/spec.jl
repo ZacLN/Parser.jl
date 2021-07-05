@@ -35,8 +35,10 @@ end
 
 @testset ":global" begin
     test_expr("global a", :global, 2)
-    test_expr("global a, b", :global, 4)
+    test_expr("global a, b", :global, 3)
+    test_expr("global a, b = 2", :global, 2)
     test_expr("global const a = 1", :const, 3)
+    test_expr("global const a = 1, b", :const, 3)
 end
 
 @testset ":const" begin

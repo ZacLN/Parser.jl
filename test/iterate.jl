@@ -703,7 +703,7 @@ end
         @test x[5] === x.args[3]
     end
 
-    @testset ":flatten" begin 
+    @testset ":flatten" begin
         function flatten(x)
             if length(x) == 0
                 [x]
@@ -722,7 +722,7 @@ end
         @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7)")
         @test testflattenorder("(1 for 2 in 3 for 4 in 5, 6 in 7 if 8)")
     end
-    
+
     @testset ":filter" begin
         x = cst"(a for a in A if a)".args[1].args[2]
         @test length(x) == 3
@@ -817,6 +817,10 @@ end
 
 @testset "self test" begin
     test_iter_spans(CSTParser.parse(String(read("parser.jl")), true))
-    [(@info f test_iter_spans(CSTParser.parse(String(read(f)), true))) for f in joinpath.(abspath("../src"), readdir("../src")) if endswith(f, ".jl")]
-    [(@info f test_iter_spans(CSTParser.parse(String(read(f)), true))) for f in joinpath.(abspath("../src"), readdir("../src")) if endswith(f, ".jl")]
+
+    for f in joinpath.(abspath("../src"), readdir("../src"))
+        if endswith(f, ".jl")
+            test_iter_spans(CSTParser.parse(String(read(f)), true))
+        end
+    end
 end
