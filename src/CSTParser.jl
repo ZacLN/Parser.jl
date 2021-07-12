@@ -7,7 +7,7 @@ import Tokenize.Tokens
 import Tokenize.Tokens: RawToken, AbstractToken, iskeyword, isliteral, isoperator, untokenize
 import Tokenize.Lexers: Lexer, peekchar, iswhitespace
 
-export ParseState, parse_expression
+export ParseState, parse_expression, parse_code
 
 include("lexer.jl")
 include("spec.jl")
@@ -277,6 +277,19 @@ function _continue_doc_parse(ps::ParseState, x::EXPR)
     valof(x.args[1]) == "@doc" &&
     length(x.args) < 4 &&
     ps.t.endpos[1] + 1 == ps.nt.startpos[1]
+end
+
+"""
+    parse_code(str)
+
+Parse a code given as string
+"""
+function parse_code(str)
+    cst, ps = CSTParser.parse(ParseState(str), true)
+    if CSTParser.has_error(ps)
+        error("Julia code parsing failed")
+    end
+    return cst
 end
 
 include("precompile.jl")
